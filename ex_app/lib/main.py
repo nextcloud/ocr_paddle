@@ -29,7 +29,7 @@ def log(nc, level, content):
     except:
         pass
 
-TASKPROCESSING_PROVIDER_ID = 'ocr_deepseek:deepseek_ocr'
+TASKPROCESSING_PROVIDER_ID = 'ocr_paddle:ocr'
 
 def load_model():
     if True or get_computation_device().lower() == 'cuda':
@@ -162,10 +162,10 @@ async def enabled_handler(enabled: bool, nc: NextcloudApp) -> str:
         await nc.providers.task_processing.register(TaskProcessingProvider(
             id=TASKPROCESSING_PROVIDER_ID,
             name='Nextcloud Local OCR: DeepSeek OCR',
-            task_type='core:image2text_ocr',
+            task_type='core:image2text:ocr',
             expected_runtime=120,
         ), TaskType(
-            id='core:image2text_ocr',
+            id='core:image2text:ocr',
             name='Optical Character Recognition',
             description="Turn images into text",
             input_shape=[ShapeDescriptor(name='input', description='The image to turn into text', shape_type=ShapeType.FILE)],
