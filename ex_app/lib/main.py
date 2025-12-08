@@ -92,7 +92,7 @@ def background_thread_task():
             sleep(30)
             continue
         try:
-            next = nc.providers.task_processing.next_task([TASKPROCESSING_PROVIDER_ID], ['core:image2text_ocr'])
+            next = nc.providers.task_processing.next_task([TASKPROCESSING_PROVIDER_ID], ['core:image2text:ocr'])
             if not 'task' in next or next is None:
                 wait_for_task()
                 continue
@@ -164,12 +164,6 @@ async def enabled_handler(enabled: bool, nc: NextcloudApp) -> str:
             name='Nextcloud Local OCR: DeepSeek OCR',
             task_type='core:image2text:ocr',
             expected_runtime=120,
-        ), TaskType(
-            id='core:image2text:ocr',
-            name='Optical Character Recognition',
-            description="Turn images into text",
-            input_shape=[ShapeDescriptor(name='input', description='The image to turn into text', shape_type=ShapeType.FILE)],
-            output_shape=[ShapeDescriptor(name='output', description='The text of the image', shape_type=ShapeType.TEXT)],
         ))
         app_enabled.set()
     else:
