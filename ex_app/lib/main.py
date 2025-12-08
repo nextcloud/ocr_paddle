@@ -32,7 +32,7 @@ def log(nc, level, content):
 TASKPROCESSING_PROVIDER_ID = 'ocr_paddle:ocr'
 
 def load_model():
-    if True or get_computation_device().lower() == 'cuda':
+    if get_computation_device().lower() == 'cuda':
         model = AutoModelForCausalLM.from_pretrained(
             "PaddlePaddle/PaddleOCR-VL",
             dtype=torch.bfloat16,
