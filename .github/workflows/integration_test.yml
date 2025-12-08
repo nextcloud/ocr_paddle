@@ -135,7 +135,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: ${{ env.APP_NAME }}/requirements.txt
+          cache-dependency-path: ${{ env.APP_NAME }}/requirements.lock.txt
 
       - name: Install app
         working-directory: ${{ env.APP_NAME }}
