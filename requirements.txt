@@ -1,0 +1,11 @@
+nc_py_api[app]>=0.22.0
+transformers==4.57.3
+torch
+pdf2image
+pillow
+accelerate
+niquests
+einops
+torchvision
+protobuf
+sentencepiece

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<info>
+	<id>ocr_paddle</id>
+	<name>Local OCR: PaddleOCR</name>
+	<summary>ImageToText provider using PaddleOCR</summary>
+	<description>
+	<![CDATA[
+ImageToText provider using PaddleOCR
+
+The models run completely on your machine. No private data leaves your servers.
+]]>
+	</description>
+	<version>1.0.0</version>
+	<licence>MIT</licence>
+	<author mail="mklehr@gmx.net" homepage="https://marcelklehr.de">Marcel Klehr</author>
+	<namespace>OCRPaddle</namespace>
+	<category>ai</category>
+	<category>tools</category>
+	<website>https://github.com/nextcloud/text2image_stablediffusion2</website>
+	<bugs>https://github.com/nextcloud/text2image_stablediffusion2/issues</bugs>
+	<repository type="git">https://github.com/nextcloud/text2image_stablediffusion2</repository>
+	<dependencies>
+		<nextcloud min-version="33" max-version="33" />
+	</dependencies>
+	<external-app>
+		<docker-install>
+			<registry>ghcr.io</registry>
+			<image>nextcloud/text2image_stablediffusion2</image>
+			<image-tag>1.0.0</image-tag>
+		</docker-install>
+	</external-app>
+</info>
