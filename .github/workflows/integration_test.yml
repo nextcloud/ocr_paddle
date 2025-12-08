@@ -147,8 +147,8 @@ jobs:
         env:
           APP_VERSION: ${{ fromJson(steps.appinfo.outputs.result).version }}
         run: |
-          PYTHONPATH="$(pwd)"
-          python3 ex_app/lib/main.py > ../../backend_logs 2>&1 &
+          export PYTHONPATH="$(pwd)"
+          python3 ex_app/lib/main.py > backend_logs 2>&1 &
 
       - name: Register backend
         run: |
