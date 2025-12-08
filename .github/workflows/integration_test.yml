@@ -143,11 +143,12 @@ jobs:
           python3 -m pip install -r requirements.txt
 
       - name: Install and init backend
-        working-directory: ${{ env.APP_NAME }}/ex_app/lib
+        working-directory: ${{ env.APP_NAME }}
         env:
           APP_VERSION: ${{ fromJson(steps.appinfo.outputs.result).version }}
         run: |
-          python3 main.py > ../../backend_logs 2>&1 &
+          PYTHONPATH="$(pwd)"
+          python3 ex_app/lib/main.py > ../../backend_logs 2>&1 &
 
       - name: Register backend
         run: |
