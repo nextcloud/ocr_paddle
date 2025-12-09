@@ -11,7 +11,7 @@ from PIL import Image
 from fastapi import FastAPI
 from nc_py_api import NextcloudApp
 from nc_py_api.ex_app import AppAPIAuthMiddleware, LogLvl, get_computation_device, run_app, set_handlers
-from nc_py_api.ex_app.providers.task_processing import ShapeDescriptor, ShapeType, TaskProcessingProvider, TaskType
+from nc_py_api.ex_app.providers.task_processing import TaskProcessingProvider
 from transformers import AutoModel, AutoModelForCausalLM, AutoProcessor, AutoTokenizer
 
 from ex_app.lib.ocs import get_file
@@ -36,7 +36,7 @@ def load_model():
         model = AutoModelForCausalLM.from_pretrained(
             "PaddlePaddle/PaddleOCR-VL",
             dtype=torch.bfloat16,
-            trust_remote_code=True
+            trust_remote_code=True,
         )
         model = model.to('cuda').eval()
         device = 'cuda'
@@ -44,7 +44,7 @@ def load_model():
         # Cpu does not support fp16
         model = AutoModel.from_pretrained(
             "PaddlePaddle/PaddleOCR-VL",
-            trust_remote_code=True
+            trust_remote_code=True,
         )
         model = model.to("cpu").eval()
         device = 'cpu'
@@ -106,40 +106,18 @@ def background_thread_task():
             log(nc, LogLvl.INFO, f"Next task: {task['id']}")
 
             log(nc, LogLvl.INFO, "Running OCR")
+
             time_start = perf_counter()
-            fileId = task.get("input").get('input')
-            file_name = get_file(nc, task["id"], fileId)
-            image = Image.open(file_name).convert("RGB")
-            nc.providers.task_processing.set_progress(task['id'], 15)
-
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "image": image},
-                        {"type": "text", "text": "OCR:"}
-                    ]
-                }
-            ]
-
-            inputs = processor.apply_chat_template(
-                messages,
-                tokenize=True,
-                add_generation_prompt=True,
-                return_dict=True,
-                return_tensors="pt"
-            ).to(device)
-            nc.providers.task_processing.set_progress(task['id'], 30)
-            outputs = model.generate(**inputs, max_new_tokens=1024)
-            nc.providers.task_processing.set_progress(task['id'], 75)
-            outputs = processor.batch_decode(outputs, skip_special_tokens=True)[0]
-            nc.providers.task_processing.set_progress(task['id'], 95)
+            fileIds = task.get("input").get('input')
+            outputs = []
+            for fileId in fileIds:
+                outputs.append(process_file(device, fileId, model, nc, processor, task))
             log(nc, LogLvl.INFO, f"OCR finished: {perf_counter() - time_start}s")
 
 
             nc.providers.task_processing.report_result(
                 task["id"],
-                {'output': outputs.split('Assistant: ', 1)[1]},
+                { 'output': outputs },
             )
 
         except Exception as e:  # noqa
@@ -152,23 +130,48 @@ def background_thread_task():
             wait_for_task(30)
 
 
+def process_file(device, fileId, model, nc, processor, task):
+    file_name = get_file(nc, task["id"], fileId)
+    image = Image.open(file_name).convert("RGB")
+    nc.providers.task_processing.set_progress(task['id'], 15)
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": image},
+                {"type": "text", "text": "OCR:"}
+            ]
+        }
+    ]
+    inputs = processor.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=True,
+        return_dict=True,
+        return_tensors="pt"
+    ).to(device)
+
+    outputs = model.generate(**inputs, max_new_tokens=1024)
+    outputs = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+    return outputs.split('Assistant: ', 1)[1]
+
 
 async def enabled_handler(enabled: bool, nc: NextcloudApp) -> str:
     # This will be called each time application is `enabled` or `disabled`
     # NOTE: `user` is unavailable on this step, so all NC API calls that require it will fail as unauthorized.
     print(f"enabled={enabled}")
     if enabled:
-        await nc.log(LogLvl.WARNING, f"Enabled: {nc.app_cfg.app_name}")
+        log(nc, LogLvl.WARNING, f"Enabled: {nc.app_cfg.app_name}")
         await nc.providers.task_processing.register(TaskProcessingProvider(
             id=TASKPROCESSING_PROVIDER_ID,
-            name='Nextcloud Local OCR: DeepSeek OCR',
+            name='Nextcloud Local OCR: Paddle OCR',
             task_type='core:image2text:ocr',
             expected_runtime=120,
         ))
         app_enabled.set()
     else:
         await nc.providers.task_processing.unregister(TASKPROCESSING_PROVIDER_ID, True)
-        nc.log(LogLvl.WARNING, f"Disabled {nc.app_cfg.app_name}")
+        log(nc, LogLvl.WARNING, f"Disabled {nc.app_cfg.app_name}")
         app_enabled.clear()
     # In case of an error, a non-empty short string should be returned, which will be shown to the NC administrator.
     return ""
