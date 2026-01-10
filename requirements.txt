@@ -1,5 +1,5 @@
 nc_py_api[app]>=0.22.0
-transformers==4.57.3
+transformers==4.57.1
 torch
 pdf2image
 pillow
