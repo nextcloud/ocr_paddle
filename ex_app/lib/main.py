@@ -31,10 +31,18 @@ def log(nc, level, content):
 
 TASKPROCESSING_PROVIDER_ID = 'ocr_paddle:ocr'
 
+MODEL_NAME = "PaddlePaddle/PaddleOCR-VL"
+# Pin the model revision so the remote code (trust_remote_code) cannot drift.
+# Newer revisions switched to transformers' create_causal_mask(inputs_embeds=...)
+# helper, which is incompatible with the pinned transformers version and breaks
+# inference. This revision uses the self-contained _update_causal_mask path.
+MODEL_REVISION = "be8ed7492f996cb9e0148aa0c97567f2f7bddfc5"
+
 def load_model():
     if get_computation_device().lower() == 'cuda':
         model = AutoModelForCausalLM.from_pretrained(
-            "PaddlePaddle/PaddleOCR-VL",
+            MODEL_NAME,
+            revision=MODEL_REVISION,
             dtype=torch.bfloat16,
             trust_remote_code=True,
         )
@@ -43,13 +51,14 @@ def load_model():
     else:
         # Cpu does not support fp16
         model = AutoModel.from_pretrained(
-            "PaddlePaddle/PaddleOCR-VL",
+            MODEL_NAME,
+            revision=MODEL_REVISION,
             trust_remote_code=True,
         )
         model = model.to("cpu").eval()
         device = 'cpu'
 
-    processor = AutoProcessor.from_pretrained("PaddlePaddle/PaddleOCR-VL", trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(MODEL_NAME, revision=MODEL_REVISION, trust_remote_code=True)
     return model, processor, device
 
 
@@ -173,7 +182,7 @@ async def enabled_handler(enabled: bool, nc: NextcloudApp) -> str:
         await nc.providers.task_processing.unregister(TASKPROCESSING_PROVIDER_ID, True)
         log(nc, LogLvl.WARNING, f"Disabled {nc.app_cfg.app_name}")
         app_enabled.clear()
-    # In case of an error, a non-empty short string should be returned, which will be shown to the NC administrator.
+    # In case of an error, a non-empty short string should Yesbe returned, which will be shown to the NC administrator.
     return ""
 
 
