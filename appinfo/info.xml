@@ -1,4 +1,8 @@
 <?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Nextcloud GmbH and Nextcloud contributors
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <info>
 	<id>ocr_paddle</id>
 	<name>Local OCR: PaddleOCR</name>
@@ -11,7 +15,7 @@ The models run completely on your machine. No private data leaves your servers.
 ]]>
 	</description>
 	<version>1.0.0</version>
-	<licence>MIT</licence>
+	<licence>AGPL-3.0-or-later</licence>
 	<author mail="mklehr@gmx.net" homepage="https://marcelklehr.de">Marcel Klehr</author>
 	<namespace>OCRPaddle</namespace>
 	<category>ai</category>
@@ -20,7 +24,7 @@ The models run completely on your machine. No private data leaves your servers.
 	<bugs>https://github.com/nextcloud/ocr_paddle/issues</bugs>
 	<repository type="git">https://github.com/nextcloud/ocr_paddle</repository>
 	<dependencies>
-		<nextcloud min-version="33" max-version="33" />
+		<nextcloud min-version="35" max-version="35" />
 	</dependencies>
 	<external-app>
 		<docker-install>
