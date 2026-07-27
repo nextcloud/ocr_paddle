@@ -5,8 +5,8 @@
 .DEFAULT_GOAL := help
 
 APP_ID := ocr_paddle
-APP_NAME := Local OCR: Paddle
-APP_VERSION := 1.0.0
+APP_NAME := Local OCR: PaddleOCR
+APP_VERSION := 1.0.1
 JSON_INFO := "{\"id\":\"$(APP_ID)\",\"name\":\"$(APP_NAME)\",\"daemon_config_name\":\"manual_install\",\"version\":\"$(APP_VERSION)\",\"secret\":\"12345\",\"port\":9030}"
 
 

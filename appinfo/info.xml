@@ -14,7 +14,7 @@ ImageToText provider using PaddleOCR
 The models run completely on your machine. No private data leaves your servers.
 ]]>
 	</description>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="mklehr@gmx.net" homepage="https://marcelklehr.de">Marcel Klehr</author>
 	<namespace>OCRPaddle</namespace>
