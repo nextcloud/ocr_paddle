@@ -14,7 +14,7 @@ ImageToText provider using PaddleOCR
 The models run completely on your machine. No private data leaves your servers.
 ]]>
 	</description>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="mklehr@gmx.net" homepage="https://marcelklehr.de">Marcel Klehr</author>
 	<namespace>OCRPaddle</namespace>
@@ -30,7 +30,7 @@ The models run completely on your machine. No private data leaves your servers.
 		<docker-install>
 			<registry>ghcr.io</registry>
 			<image>nextcloud/ocr_paddle</image>
-			<image-tag>1.0.2</image-tag>
+			<image-tag>1.0.3</image-tag>
 		</docker-install>
 	</external-app>
 </info>
