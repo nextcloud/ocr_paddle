@@ -27,7 +27,7 @@ The models run completely on your machine. No private data leaves your servers.
 	<bugs>https://github.com/nextcloud/ocr_paddle/issues</bugs>
 	<repository type="git">https://github.com/nextcloud/ocr_paddle</repository>
 	<dependencies>
-		<nextcloud min-version="35" max-version="35" />
+		<nextcloud min-version="35" max-version="36" />
 	</dependencies>
 	<external-app>
 		<docker-install>
