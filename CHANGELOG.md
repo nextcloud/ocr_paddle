@@ -7,18 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-### Added
-- Support for PDF input. Multi-page PDFs are rasterized and read page by page,
-  and the page texts are returned joined as a single document.
-- `OCR_PDF_DPI`, `OCR_MAX_PDF_PAGES` and `OCR_MAX_PAGE_PIXELS` environment
-  variables to tune PDF rendering resolution, the page limit per document and
-  the maximum rasterized page size.
+
+## [1.0.4] - 2026-09-07
 
 ### Fixed
+- fix: Process PDF files correctly
 - Task progress now advances per input file and per PDF page instead of being
   pinned at 15%.
 - Downloaded input files are removed once processed instead of accumulating in
   the temporary directory.
+- perf: Reduce DPI and use_cache=True to speedup processing
+- fix: Increase MAX_OUTPUT_TOKENS
 
 ## [1.0.3] - 2026-07-27
 
