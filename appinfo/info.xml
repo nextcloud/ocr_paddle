@@ -11,6 +11,9 @@
 	<![CDATA[
 ImageToText provider using PaddleOCR
 
+Extracts text from images and from PDFs. Multi-page PDFs are processed page by
+page and the extracted text is returned as one document.
+
 The models run completely on your machine. No private data leaves your servers.
 ]]>
 	</description>

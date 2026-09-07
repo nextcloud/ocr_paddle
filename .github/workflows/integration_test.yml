@@ -158,6 +158,7 @@ jobs:
       - name: Prepare file
         run: |
           cp ${{ env.APP_NAME }}/test/res/test.png data/admin/files/
+          cp ${{ env.APP_NAME }}/test/res/test.pdf data/admin/files/
           ./occ files:scan admin
 
       - name: Run task
@@ -188,6 +189,40 @@ jobs:
           curl -u "$CREDS" -H "oCS-APIRequest: true" http://localhost:8080/ocs/v2.php/taskprocessing/task/$TASK_ID?format=json
           [ "$TASK_STATUS" == '"STATUS_SUCCESSFUL"' ]
           echo $TASK | grep "This is a test for Nextcloud's OCR app."
+
+      - name: Run task on a PDF
+        env:
+          CREDS: "admin:password"
+        run: |
+          set -x
+          NUMERIC_FILE_ID=$(curl -s -X PROPFIND -u "$CREDS" -H "Depth: 0" "http://localhost:8080/remote.php/dav/files/admin/test.pdf" --data '<?xml version="1.0"?>
+            <d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+            <d:prop>
+            <oc:id/>
+            </d:prop>
+            </d:propfind>' | grep -oP '(?<=<oc:id>)[^<]+' | grep -oE '^[0-9]+')
+          FILE_ID=$((10#$NUMERIC_FILE_ID))
+          TASK=$(curl -X POST -u "$CREDS" -H "oCS-APIRequest: true" -H "Content-type: application/json" http://localhost:8080/ocs/v2.php/taskprocessing/schedule?format=json --data-raw "{\"input\": {\"input\": [${FILE_ID}]}, \"type\":\"core:image2text:ocr\", \"appId\": \"test\", \"customId\": \"\"}")
+          echo $TASK
+          TASK_ID=$(echo $TASK | jq '.ocs.data.task.id')
+          NEXT_WAIT_TIME=0
+          TASK_STATUS='"STATUS_SCHEDULED"'
+          until [ $NEXT_WAIT_TIME -eq 90 ] || [ "$TASK_STATUS" == '"STATUS_SUCCESSFUL"' ] || [ "$TASK_STATUS" == '"STATUS_FAILED"' ]; do
+            TASK=$(curl -u "$CREDS" -H "oCS-APIRequest: true" http://localhost:8080/ocs/v2.php/taskprocessing/task/$TASK_ID?format=json)
+            echo $TASK
+            TASK_STATUS=$(echo $TASK | jq '.ocs.data.task.status')
+            echo $TASK_STATUS
+            sleep $(( NEXT_WAIT_TIME++ ))
+          done
+          curl -u "$CREDS" -H "oCS-APIRequest: true" http://localhost:8080/ocs/v2.php/taskprocessing/task/$TASK_ID?format=json
+          [ "$TASK_STATUS" == '"STATUS_SUCCESSFUL"' ]
+          # test.pdf is the test image twice, so a correct multi-page read
+          # returns the sentence once per page in a single output entry.
+          TEXT=$(echo $TASK | jq -r '.ocs.data.task.output.output[0]')
+          echo "$TEXT"
+          PAGES=$(echo "$TEXT" | grep -oF "This is a test for Nextcloud's OCR app." | wc -l)
+          echo "pages recognised: $PAGES"
+          [ "$PAGES" -eq 2 ]
 
       - name: Show logs
         if: always()
