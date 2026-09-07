@@ -45,10 +45,13 @@ MODEL_NAME = "PaddlePaddle/PaddleOCR-VL"
 # inference. This revision uses the self-contained _update_causal_mask path.
 MODEL_REVISION = "be8ed7492f996cb9e0148aa0c97567f2f7bddfc5"
 
-# Resolution used to rasterize PDF pages. 200dpi is the usual sweet spot for
-# OCR: high enough to keep small print legible, low enough that a page image
-# stays a manageable size.
-PDF_DPI = int(os.environ.get("OCR_PDF_DPI", "200"))
+# Resolution used to rasterize PDF pages. The image processor caps its input at
+# max_pixels=2822400, so an A4 page rendered above ~170dpi is scaled straight
+# back down to the same 1400x1988 grid (3550 image tokens) that the model would
+# have seen anyway. Rendering at 170 therefore feeds the model an identical
+# number of image tokens while giving poppler and PIL ~30% fewer pixels to
+# rasterize and resize.
+PDF_DPI = int(os.environ.get("OCR_PDF_DPI", "170"))
 # Safety net for very long documents: tasks are processed serially by a single
 # worker, so one huge PDF would otherwise block every other queued task for
 # hours. Pages past the limit are skipped and the truncation is reported both
@@ -223,7 +226,15 @@ def run_ocr(device, model, processor, image):
         return_tensors="pt"
     ).to(device)
 
-    outputs = model.generate(**inputs, max_new_tokens=1024)
+    # Both config.json and generation_config.json ship use_cache=False, which
+    # looks like a training leftover. Without a KV cache, generate() never
+    # slices input_ids (it only does so when past_key_values is not None), so
+    # every decode step re-runs a full forward over the whole ~3.5k-token
+    # prompt. Worse, prepare_inputs_for_generation() clears pixel_values once
+    # cache_position advances, so those re-forwarded image placeholders are
+    # embedded as plain tokens and the model goes blind to the page after its
+    # first generated token. Enabling the cache is both far faster and correct.
+    outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True)
     outputs = processor.batch_decode(outputs, skip_special_tokens=True)[0]
     # The decoded text echoes the prompt, so keep only the assistant's turn.
     # Fall back to the full decode rather than failing the whole document if a
