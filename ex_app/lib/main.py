@@ -62,6 +62,14 @@ MAX_PDF_PAGES = int(os.environ.get("OCR_MAX_PDF_PAGES", "50"))
 # those down before OCR. Generous enough that ordinary A4/A3 pages at 200dpi
 # are never touched, and the model's processor resizes its input anyway.
 MAX_PAGE_PIXELS = int(os.environ.get("OCR_MAX_PAGE_PIXELS", "4000"))
+# Upper bound on the text emitted for a single page. generate() stops at EOS,
+# so on an ordinary page this ceiling is never reached and costs nothing -- but
+# it is a real ceiling on dense ones: a full A4 page of prose already tokenizes
+# to ~1000 tokens, and a page that is mostly table gets there in a fraction of
+# the characters because every cell delimiter costs a token. The KV cache is
+# ~18KB/token (18 layers, 2 KV heads via GQA, bf16), so raising this is cheap:
+# 4096 tokens is ~75MB, against a model context limit of 131072.
+MAX_OUTPUT_TOKENS = int(os.environ.get("OCR_MAX_OUTPUT_TOKENS", "4096"))
 
 def load_model():
     if get_computation_device().lower() == 'cuda':
@@ -234,13 +242,26 @@ def run_ocr(device, model, processor, image):
     # cache_position advances, so those re-forwarded image placeholders are
     # embedded as plain tokens and the model goes blind to the page after its
     # first generated token. Enabling the cache is both far faster and correct.
-    outputs = model.generate(**inputs, max_new_tokens=1024, use_cache=True)
-    outputs = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+    outputs = model.generate(**inputs, max_new_tokens=MAX_OUTPUT_TOKENS, use_cache=True)
+
+    # EOS and the token cap are the only two stopping conditions, so a run that
+    # used its whole budget without emitting EOS was cut off mid-page. Detect it
+    # here: the decoded text of a truncated page is indistinguishable from a
+    # complete one, and silently returning half a page is worse than saying so.
+    generated = outputs[0, inputs["input_ids"].shape[1]:]
+    eos_ids = model.generation_config.eos_token_id
+    if eos_ids is None:
+        eos_ids = []
+    elif isinstance(eos_ids, int):
+        eos_ids = [eos_ids]
+    truncated = len(generated) >= MAX_OUTPUT_TOKENS and int(generated[-1]) not in eos_ids
+
+    text = processor.batch_decode(outputs, skip_special_tokens=True)[0]
     # The decoded text echoes the prompt, so keep only the assistant's turn.
     # Fall back to the full decode rather than failing the whole document if a
     # single page comes back without the marker.
     marker = 'Assistant: '
-    return outputs.split(marker, 1)[1] if marker in outputs else outputs
+    return (text.split(marker, 1)[1] if marker in text else text), truncated
 
 
 def process_file(device, fileId, model, nc, processor, task, progress_start, progress_end):
@@ -253,13 +274,25 @@ def process_file(device, fileId, model, nc, processor, task, progress_start, pro
                 f"(OCR_MAX_PDF_PAGES={MAX_PDF_PAGES})")
 
         texts = []
+        truncated_pages = []
         for page_number, page in enumerate(pages, start=1):
-            texts.append(run_ocr(device, model, processor, page))
+            text, truncated = run_ocr(device, model, processor, page)
+            if truncated:
+                truncated_pages.append(page_number)
+                log(nc, LogLvl.WARNING,
+                    f"File {fileId} page {page_number} hit the output limit of "
+                    f"{MAX_OUTPUT_TOKENS} tokens; its text is cut off "
+                    f"(OCR_MAX_OUTPUT_TOKENS={MAX_OUTPUT_TOKENS})")
+            texts.append(text)
             nc.providers.task_processing.set_progress(
                 task['id'],
                 progress_start + (progress_end - progress_start) * page_number / pages_to_read,
             )
 
+        if truncated_pages:
+            pages_list = ", ".join(str(n) for n in truncated_pages)
+            texts.append(f"[Text was cut off at the {MAX_OUTPUT_TOKENS}-token output "
+                         f"limit on page(s) {pages_list}.]")
         if pages_to_read < total_pages:
             texts.append(f"[Only the first {pages_to_read} of {total_pages} pages were processed.]")
         return "\n\n".join(texts)
