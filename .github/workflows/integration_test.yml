@@ -138,6 +138,11 @@ jobs:
       - name: Install app
         working-directory: ${{ env.APP_NAME }}
         run: |
+          # pdf2image shells out to poppler to rasterize PDF pages. The Docker
+          # image ships poppler-utils, but this job runs the backend directly on
+          # the runner, so it has to be installed here too.
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends poppler-utils
           python3 -m pip install --upgrade pip setuptools wheel
           python3 -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           python3 -m pip install -r requirements.txt
